@@ -129,7 +129,17 @@ getDeviceList(PyObject *self, PyObject *args)
 {
 	PyObject* pyList = NULL; 
 	
+	BOOL wasInitialized = FALSE; 
 	HRESULT hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
+	if (hr == RPC_E_CHANGED_MODE) 
+	{
+		hr = CoInitialize(NULL);
+		if (hr == RPC_E_CHANGED_MODE) 
+		{
+			wasInitialized = TRUE; // COM was already initialized by some, and we were unable to guess how.
+								   // Let's hope that it will not be uninitialized it during enumeration	
+		}
+	}
 	if (SUCCEEDED(hr))
 	{
 		IEnumMoniker *pEnum;
@@ -140,7 +150,10 @@ getDeviceList(PyObject *self, PyObject *args)
 			pyList = DisplayDeviceInformation(pEnum);
 			pEnum->Release();
 		}
-		CoUninitialize();
+		if (!wasInitialized)
+		{
+			CoUninitialize();
+		}
 	}
 
     return pyList;
